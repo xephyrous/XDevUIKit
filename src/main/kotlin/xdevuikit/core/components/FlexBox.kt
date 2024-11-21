@@ -14,24 +14,33 @@ import androidx.compose.ui.unit.dp
 import xdevuikit.core.utils.DpSize
 import xdevuikit.core.utils.first
 import xdevuikit.core.utils.second
+import xdevuikit.core.utils.third
 
 /**
- * Controls the animated state of a [FlexBox]
+ * Controls the animated state and position of a [FlexBox]
  *
  * @param initialSize The initial size of the FlexBox
  */
 class FlexBoxController(
     initialSize: DpSize,
 ) {
+    /** The mutable state of the [FlexBox]'s width */
     var targetWidth = mutableStateOf(initialSize.width)
         private set
+
+    /** The mutable state of the [FlexBox]'s height */
     var targetHeight = mutableStateOf(initialSize.height)
         private set
-    var durationMs: Array<Int?> = arrayOf(1000, 1000)
-        private set
-    var easing: Easing = LinearEasing
+
+    /** The duration of the [FlexBox]'s width, height, and position animations (in milliseconds) */
+    var durationMs: Array<Int?> = arrayOf(1000, 1000, 1000)
         private set
 
+    /** The easing functions to use for the [FlexBox]'s width, height, and position animation */
+    var easing: Array<Easing?> = arrayOf(LinearEasing, LinearEasing, LinearEasing)
+        private set
+
+    /** Types of flex actions the [FlexBox] can perform. Used for [revert] & [revertFlex] */
     private enum class FlexAction {
         None,
         FlexSize,
@@ -39,9 +48,25 @@ class FlexBoxController(
         FlexHeight
     }
 
+    /** Types of float actions the [FlexBox] can perform. Used for [revert] & [revertFloat] */
+    enum class FloatAction {
+
+    }
+
+    /** The last flex action performed on the [FlexBox] */
     private var lastAction = FlexAction.None
+
+    /** The last size of the [FlexBox] */
     private var lastSize = DpSize(initialSize.width, initialSize.height)
+
+    /** Whether to link [flexWidth] & [flexHeight] calls */
     private var linked = false
+
+    /** The mutable state of the [FlexBox]'s X position */
+    var targetX = mutableStateOf(0.dp)
+
+    /** The mutable state of the [FlexBox]'s Y position */
+    var targetY = mutableStateOf(0.dp)
 
     /**
      * Animates a [FlexBox] to a specified size
@@ -61,8 +86,8 @@ class FlexBoxController(
         targetWidth.value = targetSize.width
         targetHeight.value = targetSize.height
 
-        this.durationMs = arrayOf(durationMs, durationMs)
-        this.easing = easing
+        this.durationMs = arrayOf(durationMs, durationMs, this.durationMs.third)
+        this.easing = arrayOf(easing, easing, this.easing.third)
     }
 
     /**
@@ -75,7 +100,7 @@ class FlexBoxController(
     private fun _flex(
         targetSize: DpSize,
         durationMs: Array<Int?>,
-        easing: Easing = LinearEasing
+        easing: Array<Easing?>,
     ) {
         targetWidth.value = targetSize.width
         targetHeight.value = targetSize.height
@@ -83,7 +108,8 @@ class FlexBoxController(
         if (durationMs.first != null) this.durationMs.first = durationMs.first
         if (durationMs.second != null) this.durationMs.second = durationMs.second
 
-        this.easing = easing
+        if (easing.first != null) this.easing.first = easing.first
+        if (easing.second != null) this.easing.second = easing.second
     }
 
     /**
@@ -101,7 +127,7 @@ class FlexBoxController(
         lastAction = if (linked) FlexAction.FlexSize else FlexAction.FlexSize
         if (!linked) lastSize = DpSize(this.targetWidth.value, this.targetHeight.value)
 
-        _flex(DpSize(width, this.targetHeight.value), arrayOf(durationMs, null), easing)
+        _flex(DpSize(width, this.targetHeight.value), arrayOf(durationMs, null), arrayOf(easing, null))
     }
 
     /**
@@ -119,34 +145,56 @@ class FlexBoxController(
         lastAction = if (linked) FlexAction.FlexSize else FlexAction.FlexHeight
         if (!linked) lastSize = DpSize(this.targetWidth.value, this.targetHeight.value)
 
-        _flex(DpSize(this.targetWidth.value, height), arrayOf(null, durationMs), easing)
+        _flex(DpSize(this.targetWidth.value, height), arrayOf(null, durationMs), arrayOf(null, easing))
+    }
+
+    /**
+     * Animates to the last state the [FlexBox] was in (Animation and Position)
+     */
+    fun revert() {
+        revertFlex()
+        revertFloat()
     }
 
     /**
      * Animates to the last state the [FlexBox] was in
      */
-    fun revert() {
+    fun revertFlex() {
         when (lastAction) {
             FlexAction.FlexSize -> {
                 if (!linked) {
-                    flex(lastSize, durationMs.first!!, easing)
+                    flex(lastSize, durationMs.first!!, easing.first!!)
                     return
                 }
 
                 _flex(lastSize, durationMs, easing)
                 lastAction = FlexAction.FlexSize
             }
-            FlexAction.FlexWidth -> flexWidth(lastSize.width, durationMs.first!!, easing)
-            FlexAction.FlexHeight -> flexHeight(lastSize.height, durationMs.second!!, easing)
+            FlexAction.FlexWidth -> flexWidth(lastSize.width, durationMs.first!!, easing.first!!)
+            FlexAction.FlexHeight -> flexHeight(lastSize.height, durationMs.second!!, easing.second!!)
             FlexAction.None -> { /* Nothing To Do! */ }
         }
     }
 
     /**
-     * Links [flexWidth] and [flexHeight] calls for [reverse]
+     * Animates to the last position the [FlexBox] was in
+     */
+    fun revertFloat() {
+
+    }
+
+    /**
+     * Links [flexWidth] and [flexHeight] calls for [revert] & [unflex]
      */
     fun link() {
         linked = true
+    }
+
+    /**
+     *
+     */
+    fun snap() {
+
     }
 }
 
@@ -169,12 +217,12 @@ fun FlexBox(
 ) {
     val width by animateDpAsState(
         targetValue = controller.targetWidth.value,
-        animationSpec = tween(durationMillis = controller.durationMs.first!!, easing = controller.easing)
+        animationSpec = tween(durationMillis = controller.durationMs.first!!, easing = controller.easing.first!!)
     )
 
     val height by animateDpAsState(
         targetValue = controller.targetHeight.value,
-        animationSpec = tween(durationMillis = controller.durationMs.second!!, easing = controller.easing)
+        animationSpec = tween(durationMillis = controller.durationMs.second!!, easing = controller.easing.second!!)
     )
 
     Box(
@@ -183,6 +231,6 @@ fun FlexBox(
             .then(modifier),
         contentAlignment = contentAlignment,
     ) {
-        controller.content() // Call content lambda with controller
+        controller.content()
     }
 }

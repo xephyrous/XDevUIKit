@@ -1,6 +1,6 @@
 package xdevuikit.core.examples
 
-import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.*
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -111,9 +111,9 @@ fun App() {
                     onClick = {
                         if (textD == "flexWidth() & flexHeight()") {
                             textD = "Ta-da!"
-                            flexWidth(200.dp, 1000, EaseInOut)
+                            flexWidth(200.dp, 1000, EaseInOutCubic)
                             link()
-                            flexHeight(200.dp, 500, EaseInOut)
+                            flexHeight(200.dp, 500, LinearEasing)
                             return@Button
                         }
 
