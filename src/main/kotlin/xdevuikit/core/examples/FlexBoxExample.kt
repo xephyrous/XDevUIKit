@@ -22,6 +22,8 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import xdevuikit.core.components.FlexBox
 import xdevuikit.core.utils.DpSize
+import xdevuikit.core.utils.durations
+import xdevuikit.core.utils.easings
 
 fun main() = application {
     val icon = painterResource("him.jpg")
@@ -51,12 +53,12 @@ fun App() {
                     onClick = {
                         if (textA == "flex()") {
                             textA = "Ta-da!"
-                            flex(DpSize(200.dp, 200.dp), 500, EaseInOut)
+                            flex(200.dp, 200.dp, 500, EaseInOut)
                             return@Button
                         }
 
                         textA = "flex()"
-                        revert()
+                        revertFlex()
                     }
                 ) { Text(textA) }
             }
@@ -71,12 +73,12 @@ fun App() {
                     onClick = {
                         if (textB == "flexWidth()") {
                             textB = "Ta-da!"
-                            flexWidth(200.dp, 500, EaseInOut)
+                            flex(width = 200.dp, easing = EaseInOut)
                             return@Button
                         }
 
                         textB = "flexWidth()"
-                        revert()
+                        revertFlex()
                     }
                 ) { Text(textB) }
             }
@@ -91,12 +93,12 @@ fun App() {
                     onClick = {
                         if (textC == "flexHeight()") {
                             textC = "Ta-da!"
-                            flexHeight(200.dp, 500, EaseInOut)
+                            flex(height = 200.dp, durationMs = 500, easing = EaseInOut)
                             return@Button
                         }
 
                         textC = "flexWidth()"
-                        revert()
+                        revertFlex()
                     }
                 ) { Text(textC) }
             }
@@ -111,14 +113,16 @@ fun App() {
                     onClick = {
                         if (textD == "flexWidth() & flexHeight()") {
                             textD = "Ta-da!"
-                            flexWidth(200.dp, 1000, EaseInOutCubic)
-                            link()
-                            flexHeight(200.dp, 500, LinearEasing)
+                            flex(
+                                200.dp, 200.dp,
+                                durations(1000, 500),
+                                easings(EaseInOutCubic, LinearEasing)
+                            )
                             return@Button
                         }
 
                         textD = "flexWidth() & flexHeight()"
-                        revert()
+                        revertFlex()
                     }
                 ) { Text(textD) }
             }

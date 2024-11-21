@@ -5,16 +5,17 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import xdevuikit.core.utils.DpSize
-import xdevuikit.core.utils.first
-import xdevuikit.core.utils.second
-import xdevuikit.core.utils.third
+import xdevuikit.core.utils.*
 
 /**
  * Controls the animated state and position of a [FlexBox]
@@ -40,27 +41,13 @@ class FlexBoxController(
     var easing: Array<Easing?> = arrayOf(LinearEasing, LinearEasing, LinearEasing)
         private set
 
-    /** Types of flex actions the [FlexBox] can perform. Used for [revert] & [revertFlex] */
-    private enum class FlexAction {
-        None,
-        FlexSize,
-        FlexWidth,
-        FlexHeight
-    }
-
     /** Types of float actions the [FlexBox] can perform. Used for [revert] & [revertFloat] */
     enum class FloatAction {
 
     }
 
-    /** The last flex action performed on the [FlexBox] */
-    private var lastAction = FlexAction.None
-
     /** The last size of the [FlexBox] */
     private var lastSize = DpSize(initialSize.width, initialSize.height)
-
-    /** Whether to link [flexWidth] & [flexHeight] calls */
-    private var linked = false
 
     /** The mutable state of the [FlexBox]'s X position */
     var targetX = mutableStateOf(0.dp)
@@ -69,41 +56,33 @@ class FlexBoxController(
     var targetY = mutableStateOf(0.dp)
 
     /**
-     * Animates a [FlexBox] to a specified size
-     *
-     * @param targetSize The target size to animate to
-     * @param durationMs The time, in milliseconds, that the animation lasts
-     * @param easing The easing function to animate with (Defaults to [LinearEasing])
+     * Sets the initial position of the [FlexBox] when it is created
      */
-    fun flex(
-        targetSize: DpSize,
-        durationMs: Int = 1000,
-        easing: Easing = LinearEasing
-    ) {
-        lastAction = FlexAction.FlexSize
-        lastSize = DpSize(this.targetWidth.value, this.targetHeight.value)
-
-        targetWidth.value = targetSize.width
-        targetHeight.value = targetSize.height
-
-        this.durationMs = arrayOf(durationMs, durationMs, this.durationMs.third)
-        this.easing = arrayOf(easing, easing, this.easing.third)
+    fun setInitialPosition(x: Dp, y: Dp) {
+        targetX.value = x
+        targetY.value = y
     }
 
     /**
-     * Internal overload of [flex] that supports width and height specification
+     * Animates a [FlexBox] to a specified size
      *
-     * @param targetSize The target size to animate to
-     * @param durationMs The time, in milliseconds, that the width and/or height animate to (skips if null)
-     * @param easing The easing function to animate with (Defaults to [LinearEasing])
+     * @param width The target width to animate to
+     * @param height The target height to animate to
+     * @param durationMs The times, in milliseconds, that the animations last
+     * @param easing The easing functions to animate with (Defaults to [LinearEasing])
      */
-    private fun _flex(
-        targetSize: DpSize,
-        durationMs: Array<Int?>,
-        easing: Array<Easing?>,
+    fun flex(
+        width: Dp? = null,
+        height: Dp? = null,
+        durationMs: Array<Int?> = durations(1000, 1000),
+        easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
     ) {
-        targetWidth.value = targetSize.width
-        targetHeight.value = targetSize.height
+        if (durationMs.size < 2 || easing.size < 2) { return }
+
+        lastSize = DpSize(this.targetWidth.value, this.targetHeight.value)
+
+        if (width != null) targetWidth.value = width
+        if (height != null) targetHeight.value = height
 
         if (durationMs.first != null) this.durationMs.first = durationMs.first
         if (durationMs.second != null) this.durationMs.second = durationMs.second
@@ -113,39 +92,20 @@ class FlexBoxController(
     }
 
     /**
-     * Animates a [FlexBox] to a specified size
+     * Helper function for [flex] that applies a single duration and easing to the width & height
      *
      * @param width The target width to animate to
-     * @param durationMs The time, in milliseconds, that the animation lasts
-     * @param easing The easing function to animate with (Defaults to [LinearEasing])
-     */
-    fun flexWidth(
-        width: Dp,
-        durationMs: Int,
-        easing: Easing = LinearEasing
-    ) {
-        lastAction = if (linked) FlexAction.FlexSize else FlexAction.FlexSize
-        if (!linked) lastSize = DpSize(this.targetWidth.value, this.targetHeight.value)
-
-        _flex(DpSize(width, this.targetHeight.value), arrayOf(durationMs, null), arrayOf(easing, null))
-    }
-
-    /**
-     * Animates a [FlexBox] to a specified size
-     *
      * @param height The target height to animate to
      * @param durationMs The time, in milliseconds, that the animation lasts
      * @param easing The easing function to animate with (Defaults to [LinearEasing])
      */
-    fun flexHeight(
-        height: Dp,
-        durationMs: Int,
-        easing: Easing = LinearEasing
+    fun flex(
+        width: Dp? = null,
+        height: Dp? = null,
+        durationMs: Int = 1000,
+        easing: Easing = LinearEasing,
     ) {
-        lastAction = if (linked) FlexAction.FlexSize else FlexAction.FlexHeight
-        if (!linked) lastSize = DpSize(this.targetWidth.value, this.targetHeight.value)
-
-        _flex(DpSize(this.targetWidth.value, height), arrayOf(null, durationMs), arrayOf(null, easing))
+        flex(width, height, durations(durationMs, durationMs), easings(easing, easing))
     }
 
     /**
@@ -160,20 +120,7 @@ class FlexBoxController(
      * Animates to the last state the [FlexBox] was in
      */
     fun revertFlex() {
-        when (lastAction) {
-            FlexAction.FlexSize -> {
-                if (!linked) {
-                    flex(lastSize, durationMs.first!!, easing.first!!)
-                    return
-                }
-
-                _flex(lastSize, durationMs, easing)
-                lastAction = FlexAction.FlexSize
-            }
-            FlexAction.FlexWidth -> flexWidth(lastSize.width, durationMs.first!!, easing.first!!)
-            FlexAction.FlexHeight -> flexHeight(lastSize.height, durationMs.second!!, easing.second!!)
-            FlexAction.None -> { /* Nothing To Do! */ }
-        }
+        flex(lastSize.width, lastSize.height, durationMs, easing)
     }
 
     /**
@@ -184,10 +131,10 @@ class FlexBoxController(
     }
 
     /**
-     * Links [flexWidth] and [flexHeight] calls for [revert] & [unflex]
+     *
      */
-    fun link() {
-        linked = true
+    fun float() {
+
     }
 
     /**
@@ -225,9 +172,24 @@ fun FlexBox(
         animationSpec = tween(durationMillis = controller.durationMs.second!!, easing = controller.easing.second!!)
     )
 
+    val x by animateDpAsState(
+        targetValue = controller.targetX.value,
+        animationSpec = tween(durationMillis = controller.durationMs.third!!, easing = controller.easing.third!!)
+    )
+
+    val y by animateDpAsState(
+        targetValue = controller.targetY.value,
+        animationSpec = tween(durationMillis = controller.durationMs.third!!, easing = controller.easing.third!!)
+    )
+
     Box(
         modifier = Modifier
+            .onGloballyPositioned { pos ->
+                val pPos = pos.positionInParent()
+                controller.setInitialPosition(pPos.x.dp, pPos.y.dp)
+            }
             .size(width, height)
+            //.offset(x, y)
             .then(modifier),
         contentAlignment = contentAlignment,
     ) {
