@@ -12,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -33,21 +35,29 @@ class FlexBoxController(
     var targetHeight = mutableStateOf(initialSize.height)
         private set
 
-    /** The duration of the [FlexBox]'s width, height, and position animations (in milliseconds) */
-    var durationMs: Array<Int?> = arrayOf(1000, 1000, 1000)
+    /**
+     *  The duration of the [FlexBox]'s width, height, and position animations (in milliseconds)
+     *
+     *  _Stored as (width, height, x, y)_
+     */
+    var durationMs: Array<Int?> = arrayOf(1000, 1000, 1000, 1000)
         private set
 
-    /** The easing functions to use for the [FlexBox]'s width, height, and position animation */
-    var easing: Array<Easing?> = arrayOf(LinearEasing, LinearEasing, LinearEasing)
+    /** The easing functions to use for the [FlexBox]'s width, height, and position animation
+     *
+     * _Stored as (width, height, x, y)_
+     */
+    var easing: Array<Easing?> = arrayOf(LinearEasing, LinearEasing, LinearEasing, LinearEasing)
         private set
-
-    /** Types of float actions the [FlexBox] can perform. Used for [revert] & [revertFloat] */
-    enum class FloatAction {
-
-    }
 
     /** The last size of the [FlexBox] */
     private var lastSize = DpSize(initialSize.width, initialSize.height)
+
+    /** The last position of the [FlexBox] */
+    private var lastPos = DpOffset(0.dp, 0.dp)
+
+    /** uhhhhhhhhhh */
+    private var relativePos = DpOffset(0.dp, 0.dp)
 
     /** The mutable state of the [FlexBox]'s X position */
     var targetX = mutableStateOf(0.dp)
@@ -59,8 +69,7 @@ class FlexBoxController(
      * Sets the initial position of the [FlexBox] when it is created
      */
     fun setInitialPosition(x: Dp, y: Dp) {
-        targetX.value = x
-        targetY.value = y
+        relativePos = DpOffset(x, y)
     }
 
     /**
@@ -127,14 +136,44 @@ class FlexBoxController(
      * Animates to the last position the [FlexBox] was in
      */
     fun revertFloat() {
-
+        float(lastPos.x, lastPos.y, durationMs.takeLast(2).toTypedArray(), easing.takeLast(2).toTypedArray())
     }
 
     /**
+     * Animates a [FlexBox] to a specified position
      *
+     * @param x The target x to animate to
+     * @param y The target y to animate to
+     * @param durationMs The times, in milliseconds, that the animations last
+     * @param easing The easing functions to animate with (Defaults to [LinearEasing])
      */
-    fun float() {
+    fun float(
+        x: Dp? = null,
+        y: Dp? = null,
+        durationMs: Array<Int?> = durations(1000, 1000),
+        easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
+    ) {
+        if (durationMs.size < 2 || easing.size < 2) { return }
 
+        lastPos = DpOffset(this.targetX.value, this.targetY.value)
+
+        if (x != null) targetX.value = x
+        if (y != null) targetY.value = y
+
+        if (durationMs.first != null) this.durationMs[2] = durationMs.first
+        if (durationMs.second != null) this.durationMs[3] = durationMs.second
+
+        if (easing.first != null) this.easing[2] = easing.first
+        if (easing.second != null) this.easing[3] = easing.second
+    }
+
+    fun float(
+        x: Dp? = null,
+        y: Dp? = null,
+        durationMs: Int = 1000,
+        easing: Easing = LinearEasing,
+    ) {
+        float(x, y, durations(durationMs, durationMs), easings(easing, easing))
     }
 
     /**
@@ -174,12 +213,12 @@ fun FlexBox(
 
     val x by animateDpAsState(
         targetValue = controller.targetX.value,
-        animationSpec = tween(durationMillis = controller.durationMs.third!!, easing = controller.easing.third!!)
+        animationSpec = tween(durationMillis = controller.durationMs[2]!!, easing = controller.easing[2]!!)
     )
 
     val y by animateDpAsState(
         targetValue = controller.targetY.value,
-        animationSpec = tween(durationMillis = controller.durationMs.third!!, easing = controller.easing.third!!)
+        animationSpec = tween(durationMillis = controller.durationMs[3]!!, easing = controller.easing[3]!!)
     )
 
     Box(
@@ -189,7 +228,7 @@ fun FlexBox(
                 controller.setInitialPosition(pPos.x.dp, pPos.y.dp)
             }
             .size(width, height)
-            //.offset(x, y)
+            .offset(x, y)
             .then(modifier),
         contentAlignment = contentAlignment,
     ) {

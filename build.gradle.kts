@@ -28,9 +28,21 @@ compose.desktop {
         mainClass = "MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "XDevUIKit"
             packageVersion = "1.0.0"
+        }
+    }
+}
+
+task("flexBoxExample") {
+    group = "examples"
+    description = "Runs FlexBoxExample.kt"
+
+    doLast {
+        javaexec {
+            mainClass.set("xdevuikit.core.examples.FlexBoxExampleKt")
+            classpath = sourceSets["main"].runtimeClasspath
         }
     }
 }

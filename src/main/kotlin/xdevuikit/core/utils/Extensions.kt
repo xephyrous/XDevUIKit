@@ -13,14 +13,6 @@ var <T> Array<T>.first
 var <T> Array<T>.second
     set(value) = set(1, value)
     get() = get(1)
-
-/**
- * Extension function for accessing & modifying the third element of a generic [Array]
- */
-var <T> Array<T>.third
-    set(value) = set(2, value)
-    get() = get(2)
-
 /**
  * Extension function for accessing & modifying the first element of an [IntArray]
  */
@@ -34,10 +26,3 @@ var IntArray.first
 var IntArray.second
     set(value) = set(1, value)
     get() = get(1)
-
-/**
- * Extension function for accessing & modifying the third element of an [IntArray]
- */
-var IntArray.third
-    set(value) = set(2, value)
-    get() = get(2)
