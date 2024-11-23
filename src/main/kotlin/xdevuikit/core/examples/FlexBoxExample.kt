@@ -52,7 +52,7 @@ fun App() {
     var textE by remember { mutableStateOf("float()") }
     var textF by remember { mutableStateOf("float() X") }
     var textG by remember { mutableStateOf("float() Y") }
-    var textH by remember { mutableStateOf("float() & flex()") }
+    var textH by remember { mutableStateOf("snap()") }
 
     MaterialTheme {
         // Title
@@ -336,22 +336,13 @@ fun App() {
                                 focusedElevation = 0.dp
                             ),
                             onClick = {
-                                if (textH == "float() & flex()") {
+                                if (textH == "snap()") {
                                     textH = "Ta-da!"
-                                    float(
-                                        50.dp, 50.dp,
-                                        durations(1000, 500),
-                                        easings(EaseInOutCubic, LinearEasing)
-                                    )
-                                    flex(
-                                        200.dp, 200.dp,
-                                        durations(1000, 500),
-                                        easings(EaseInOutCubic, LinearEasing)
-                                    )
+                                    snap(50.dp, 50.dp)
                                     return@Button
                                 }
 
-                                textH = "float() & flex()"
+                                textH = "snap()"
                                 revert()
                             }
                         ) { Text(textH) }

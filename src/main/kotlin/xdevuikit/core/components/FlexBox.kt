@@ -1,9 +1,6 @@
 package xdevuikit.core.components
 
-import androidx.compose.animation.core.Easing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -56,21 +53,11 @@ class FlexBoxController(
     /** The last position of the [FlexBox] */
     private var lastPos = DpOffset(0.dp, 0.dp)
 
-    /** uhhhhhhhhhh */
-    private var relativePos = DpOffset(0.dp, 0.dp)
-
     /** The mutable state of the [FlexBox]'s X position */
     var targetX = mutableStateOf(0.dp)
 
     /** The mutable state of the [FlexBox]'s Y position */
     var targetY = mutableStateOf(0.dp)
-
-    /**
-     * Sets the initial position of the [FlexBox] when it is created
-     */
-    fun setInitialPosition(x: Dp, y: Dp) {
-        relativePos = DpOffset(x, y)
-    }
 
     /**
      * Animates a [FlexBox] to a specified size
@@ -105,7 +92,7 @@ class FlexBoxController(
      *
      * @param width The target width to animate to
      * @param height The target height to animate to
-     * @param durationMs The time, in milliseconds, that the animation lasts
+     * @param durationMs The time, in milliseconds, that the animations last
      * @param easing The easing function to animate with (Defaults to [LinearEasing])
      */
     fun flex(
@@ -167,6 +154,14 @@ class FlexBoxController(
         if (easing.second != null) this.easing[3] = easing.second
     }
 
+    /**
+     * Helper function for [float] that applies a single duration and easing to the x & y
+     *
+     * @param x The target X to animate to
+     * @param y The target Y to animate to
+     * @param durationMs The time, in milliseconds, that the animation lasts
+     * @param easing The easing function to animate with (Defaults to [LinearEasing])
+     */
     fun float(
         x: Dp? = null,
         y: Dp? = null,
@@ -177,10 +172,16 @@ class FlexBoxController(
     }
 
     /**
+     * Immediately moves the [FlexBox] to a position
      *
+     * @param x The X position to move to
+     * @param y The Y position to move to
      */
-    fun snap() {
-
+    fun snap(
+        x: Dp? = null,
+        y: Dp? = null,
+    ) {
+        float(x, y, durations(0, 0), easings(Ease, Ease))
     }
 }
 
@@ -201,32 +202,36 @@ fun FlexBox(
     controller: FlexBoxController = remember { FlexBoxController(initialSize) },
     content: @Composable FlexBoxController.() -> Unit
 ) {
-    val width by animateDpAsState(
+    /** The mutable state of the box's width */
+    val width by animateStateWithCallback(
         targetValue = controller.targetWidth.value,
-        animationSpec = tween(durationMillis = controller.durationMs.first!!, easing = controller.easing.first!!)
+        animationSpec = tween(durationMillis = controller.durationMs.first!!, easing = controller.easing.first!!),
+        callback = { }
     )
 
-    val height by animateDpAsState(
+    /** The mutable state of the box's height */
+    val height by animateStateWithCallback(
         targetValue = controller.targetHeight.value,
-        animationSpec = tween(durationMillis = controller.durationMs.second!!, easing = controller.easing.second!!)
+        animationSpec = tween(durationMillis = controller.durationMs.second!!, easing = controller.easing.second!!),
+        callback = { }
     )
 
-    val x by animateDpAsState(
+    /** The mutable state of the box's x position */
+    val x by animateStateWithCallback(
         targetValue = controller.targetX.value,
-        animationSpec = tween(durationMillis = controller.durationMs[2]!!, easing = controller.easing[2]!!)
+        animationSpec = tween(durationMillis = controller.durationMs[2]!!, easing = controller.easing[2]!!),
+        callback = { }
     )
 
-    val y by animateDpAsState(
+    /** The mutable state of the box's y position */
+    val y by animateStateWithCallback(
         targetValue = controller.targetY.value,
-        animationSpec = tween(durationMillis = controller.durationMs[3]!!, easing = controller.easing[3]!!)
+        animationSpec = tween(durationMillis = controller.durationMs[3]!!, easing = controller.easing[3]!!),
+        callback = { }
     )
 
     Box(
         modifier = Modifier
-            .onGloballyPositioned { pos ->
-                val pPos = pos.positionInParent()
-                controller.setInitialPosition(pPos.x.dp, pPos.y.dp)
-            }
             .size(width, height)
             .offset(x, y)
             .then(modifier),
