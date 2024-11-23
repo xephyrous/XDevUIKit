@@ -31,7 +31,7 @@ fun FlexBox(
     modifier: Modifier = Modifier,
     initialSize: DpSize = DpSize(100.dp, 100.dp),
     contentAlignment: Alignment = Alignment.Center,
-    content: @Composable FlexBoxControllerBase.() -> Unit
+    content: @Composable FlexBoxController.() -> Unit
 ) {
     val controller: FlexBoxController = remember { FlexBoxController(initialSize) }
 
@@ -81,7 +81,7 @@ fun FlexBox(
  */
 class FlexBoxController(
     initialSize: DpSize,
-) : FlexBoxControllerBase {
+) : FlexBoxAsyncBase {
     /** The mutable state of the [FlexBox]'s width */
     var targetWidth = mutableStateOf(initialSize.width)
         private set
@@ -125,11 +125,11 @@ class FlexBoxController(
      * @param durationMs The times, in milliseconds, that the animations last
      * @param easing The easing functions to animate with (Defaults to [LinearEasing])
      */
-    override fun flex(
-        width: Dp?,
-        height: Dp?,
-        durationMs: Array<Int?>,
-        easing: Array<Easing?>
+    fun flex(
+        width: Dp? = null,
+        height: Dp? = null,
+        durationMs: Array<Int?> = durations(1000, 1000),
+        easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
     ) {
         if (durationMs.size < 2 || easing.size < 2) { return }
 
@@ -153,7 +153,7 @@ class FlexBoxController(
         height: Dp?,
         durationMs: Array<Int?>,
         easing: Array<Easing?>
-    ): FlexBoxControllerBase {
+    ): FlexBoxAsyncBase {
         flex(width, height, durationMs, easing)
         delay(max(durationMs.first?: 0, durationMs.second?: 0).toLong())
         return this
@@ -167,11 +167,11 @@ class FlexBoxController(
      * @param durationMs The time, in milliseconds, that the animations last
      * @param easing The easing function to animate with (Defaults to [LinearEasing])
      */
-    override fun flex(
-        width: Dp?,
-        height: Dp?,
-        durationMs: Int,
-        easing: Easing
+    fun flex(
+        width: Dp? = null,
+        height: Dp? = null,
+        durationMs: Int = 1000,
+        easing: Easing = LinearEasing
     ) {
         flex(width, height, durations(durationMs, durationMs), easings(easing, easing))
     }
@@ -184,7 +184,7 @@ class FlexBoxController(
         height: Dp?,
         durationMs: Int,
         easing: Easing
-    ): FlexBoxControllerBase {
+    ): FlexBoxAsyncBase {
         flex(width, height, durationMs, easing)
         delay(durationMs.toLong())
         return this
@@ -193,7 +193,7 @@ class FlexBoxController(
     /**
      * Animates to the last state the [FlexBox] was in (Animation and Position)
      */
-    override fun revert() {
+    fun revert() {
         revertFlex()
         revertFloat()
     }
@@ -201,7 +201,7 @@ class FlexBoxController(
     /**
      * Asynchronous version of [revert] for animation chaining
      */
-    override suspend fun revertAsync(): FlexBoxControllerBase {
+    override suspend fun revertAsync(): FlexBoxAsyncBase {
         flex(lastSize.width, lastSize.height, durationMs, easing)
 
         float(
@@ -223,14 +223,14 @@ class FlexBoxController(
     /**
      * Animates to the last state the [FlexBox] was in
      */
-    override fun revertFlex() {
+    fun revertFlex() {
         flex(lastSize.width, lastSize.height, durationMs, easing)
     }
 
     /**
      * Asynchronous version of [revertFlex] for animation chaining
      */
-    override suspend fun revertFlexAsync(): FlexBoxControllerBase {
+    override suspend fun revertFlexAsync(): FlexBoxAsyncBase {
         revertFlex()
         delay(max(durationMs.first?: 0, durationMs.second?: 0).toLong())
         return this
@@ -239,7 +239,7 @@ class FlexBoxController(
     /**
      * Animates to the last position the [FlexBox] was in
      */
-    override fun revertFloat() {
+    fun revertFloat() {
         float(
             lastPos.x, lastPos.y,
             durationMs.takeLast(2).toTypedArray(),
@@ -250,7 +250,7 @@ class FlexBoxController(
     /**
      * Asynchronous version of [revertFloat] for animation chaining
      */
-    override suspend fun revertFloatAsync(): FlexBoxControllerBase {
+    override suspend fun revertFloatAsync(): FlexBoxAsyncBase {
         revertFlex()
         delay(max(durationMs[2]?: 0, durationMs[3]?: 0).toLong())
         return this
@@ -264,11 +264,11 @@ class FlexBoxController(
      * @param durationMs The times, in milliseconds, that the animations last
      * @param easing The easing functions to animate with (Defaults to [LinearEasing])
      */
-    override fun float(
-        x: Dp?,
-        y: Dp?,
-        durationMs: Array<Int?>,
-        easing: Array<Easing?>
+    fun float(
+        x: Dp? = null,
+        y: Dp? = null,
+        durationMs: Array<Int?> = durations(1000, 1000),
+        easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
     ) {
         if (durationMs.size < 2 || easing.size < 2) { return }
 
@@ -292,7 +292,7 @@ class FlexBoxController(
         y: Dp?,
         durationMs: Array<Int?>,
         easing: Array<Easing?>
-    ): FlexBoxControllerBase {
+    ): FlexBoxAsyncBase {
         float(x, y, durationMs, easing)
         delay(max(durationMs.first?: 0, durationMs.second?: 0).toLong())
         return this
@@ -306,11 +306,11 @@ class FlexBoxController(
      * @param durationMs The time, in milliseconds, that the animation lasts
      * @param easing The easing function to animate with (Defaults to [LinearEasing])
      */
-    override fun float(
-        x: Dp?,
-        y: Dp?,
-        durationMs: Int,
-        easing: Easing
+    fun float(
+        x: Dp? = null,
+        y: Dp? = null,
+        durationMs: Int = 1000,
+        easing: Easing = LinearEasing
     ) {
         float(x, y, durations(durationMs, durationMs), easings(easing, easing))
     }
@@ -323,7 +323,7 @@ class FlexBoxController(
         y: Dp?,
         durationMs: Int,
         easing: Easing
-    ): FlexBoxControllerBase {
+    ): FlexBoxAsyncBase {
         float(x, y, durationMs, easing)
         delay(durationMs.toLong())
         return this
@@ -335,9 +335,9 @@ class FlexBoxController(
      * @param x The X position to move to
      * @param y The Y position to move to
      */
-    override fun snap(
-        x: Dp?,
-        y: Dp?
+    fun snap(
+        x: Dp? = null,
+        y: Dp? = null
     ) {
         float(x, y, durations(0, 0), easings(Ease, Ease))
     }
@@ -348,88 +348,66 @@ class FlexBoxController(
     override suspend fun snapAsync(
         x: Dp?,
         y: Dp?
-    ): FlexBoxControllerBase {
+    ): FlexBoxAsyncBase {
         snap(x, y)
+        return this
+    }
+
+    /**
+     * Delays for a set amount of time
+     *
+     * @param durationMs The time to delay, in milliseconds
+     */
+    override suspend fun wait(durationMs: Long): FlexBoxAsyncBase {
+        delay(durationMs)
         return this
     }
 }
 
-interface FlexBoxControllerBase {
-    fun flex(
-        width: Dp? = null,
-        height: Dp? = null,
-        durationMs: Array<Int?> = durations(1000, 1000),
-        easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
-    )
-
+/**
+ * Exposes asynchronous functions for animation chaining in [FlexBox].
+ */
+interface FlexBoxAsyncBase {
     suspend fun flexAsync(
         width: Dp? = null,
         height: Dp? = null,
         durationMs: Array<Int?> = durations(1000, 1000),
         easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
-    ): FlexBoxControllerBase
-
-    fun flex(
-        width: Dp? = null,
-        height: Dp? = null,
-        durationMs: Int = 1000,
-        easing: Easing = LinearEasing
-    )
+    ): FlexBoxAsyncBase
 
     suspend fun flexAsync(
         width: Dp? = null,
         height: Dp? = null,
         durationMs: Int = 1000,
         easing: Easing = LinearEasing
-    ): FlexBoxControllerBase
+    ): FlexBoxAsyncBase
 
-    fun revert()
+    suspend fun revertAsync(): FlexBoxAsyncBase
 
-    suspend fun revertAsync(): FlexBoxControllerBase
+    suspend fun revertFlexAsync(): FlexBoxAsyncBase
 
-    fun revertFlex()
-
-    suspend fun revertFlexAsync(): FlexBoxControllerBase
-
-    fun revertFloat()
-
-    suspend fun revertFloatAsync(): FlexBoxControllerBase
-
-    fun float(
-        x: Dp? = null,
-        y: Dp? = null,
-        durationMs: Array<Int?> = durations(1000, 1000),
-        easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
-    )
+    suspend fun revertFloatAsync(): FlexBoxAsyncBase
 
     suspend fun floatAsync(
         x: Dp? = null,
         y: Dp? = null,
         durationMs: Array<Int?> = durations(1000, 1000),
         easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
-    ): FlexBoxControllerBase
-
-    fun float(
-        x: Dp? = null,
-        y: Dp? = null,
-        durationMs: Int = 1000,
-        easing: Easing = LinearEasing
-    )
+    ): FlexBoxAsyncBase
 
     suspend fun floatAsync(
         x: Dp? = null,
         y: Dp? = null,
         durationMs: Int = 1000,
         easing: Easing = LinearEasing
-    ): FlexBoxControllerBase
-
-    fun snap(
-        x: Dp? = null,
-        y: Dp? = null
-    )
+    ): FlexBoxAsyncBase
 
     suspend fun snapAsync(
         x: Dp? = null,
         y: Dp? = null
-    ): FlexBoxControllerBase
+    ): FlexBoxAsyncBase
+
+    suspend fun wait(
+        durationMs: Long
+    ): FlexBoxAsyncBase
 }

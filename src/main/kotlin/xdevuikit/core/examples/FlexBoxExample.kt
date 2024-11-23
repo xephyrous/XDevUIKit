@@ -15,9 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -359,9 +357,13 @@ fun App() {
 
                                     flexAsync(
                                         200.dp, 200.dp,
-                                        durations(1000, 500),
+                                        durations(500, 500),
                                         easings(EaseInOutCubic, LinearEasing)
-                                    ).revertFlexAsync()
+                                    ).floatAsync(
+                                        50.dp, 50.dp,
+                                        durations(500, 500),
+                                        easings(EaseInOutCubic, EaseInOutCubic)
+                                    ).wait(500).revertAsync()
 
                                     threadDone = true
                                 }
