@@ -10,11 +10,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,6 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import xdevuikit.core.components.FlexBox
 import xdevuikit.core.utils.DpSize
 import xdevuikit.core.utils.durations
@@ -42,6 +41,7 @@ fun main() = application {
     }
 }
 
+@OptIn(DelicateCoroutinesApi::class)
 @Composable
 @Preview
 fun App() {
@@ -54,27 +54,9 @@ fun App() {
     var textG by remember { mutableStateOf("float() Y") }
     var textH by remember { mutableStateOf("snap()") }
 
-    MaterialTheme {
-        // Title
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier.offset(y = 75.dp)
-                    .background(Color(0xff2d2a2e), shape = RoundedCornerShape(5.dp))
-                    .border(4.dp, Color(0xff232024), RoundedCornerShape(5.dp))
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-            ) {
-                Text(
-                    text = "FlexBox Examples",
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xff61afef),
-                    fontSize = 30.sp
-                )
-            }
-        }
+    var threadDone = true
 
+    MaterialTheme {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -346,6 +328,45 @@ fun App() {
                                 revert()
                             }
                         ) { Text(textH) }
+                    }
+                }
+
+                // Bottom Row
+                Row {
+                    FlexBox(
+                        modifier = Modifier
+                            .background(Color(0xff2d2a2e), shape = RoundedCornerShape(10.dp))
+                            .border(4.dp, Color(0xff232024), RoundedCornerShape(10.dp)),
+                        initialSize = DpSize(150.dp, 100.dp)
+                    ) {
+                        Button(
+                            modifier = Modifier.fillMaxSize(),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color.Transparent,
+                                contentColor = Color(0xff61afef)
+                            ),
+                            elevation = ButtonDefaults.elevation(
+                                defaultElevation = 0.dp,
+                                pressedElevation = 0.dp,
+                                hoveredElevation = 0.dp,
+                                focusedElevation = 0.dp
+                            ),
+                            onClick = {
+                                if (!threadDone) { return@Button }
+
+                                GlobalScope.launch {
+                                    threadDone = false
+
+                                    flexAsync(
+                                        200.dp, 200.dp,
+                                        durations(1000, 500),
+                                        easings(EaseInOutCubic, LinearEasing)
+                                    ).revertFlexAsync()
+
+                                    threadDone = true
+                                }
+                            }
+                        ) { Text("Function Chaining") }
                     }
                 }
             }

@@ -7,14 +7,72 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import xdevuikit.core.utils.*
+import kotlin.math.max
+
+/**
+ * A flexible box with built-in size and position controls
+ *
+ * Modification functions can be freely called within the scope of a [FlexBox],
+ * and can be chained together to execute in order
+ *
+ * @param modifier Any modifiers to the underlying box
+ * @param initialSize The initial size of the box
+ * @param contentAlignment How to align the internal content
+ * @param controller The [FlexBoxController] associated with this box
+ * @param content The internal content to display
+ */
+@Composable
+fun FlexBox(
+    modifier: Modifier = Modifier,
+    initialSize: DpSize = DpSize(100.dp, 100.dp),
+    contentAlignment: Alignment = Alignment.Center,
+    content: @Composable FlexBoxControllerBase.() -> Unit
+) {
+    val controller: FlexBoxController = remember { FlexBoxController(initialSize) }
+
+    /** The mutable state of the box's width */
+    val width by animateStateWithCallback(
+        targetValue = controller.targetWidth.value,
+        animationSpec = tween(durationMillis = controller.durationMs.first!!, easing = controller.easing.first!!),
+        callback = { }
+    )
+
+    /** The mutable state of the box's height */
+    val height by animateStateWithCallback(
+        targetValue = controller.targetHeight.value,
+        animationSpec = tween(durationMillis = controller.durationMs.second!!, easing = controller.easing.second!!),
+        callback = { }
+    )
+
+    /** The mutable state of the box's x position */
+    val x by animateStateWithCallback(
+        targetValue = controller.targetX.value,
+        animationSpec = tween(durationMillis = controller.durationMs[2]!!, easing = controller.easing[2]!!),
+        callback = { }
+    )
+
+    /** The mutable state of the box's y position */
+    val y by animateStateWithCallback(
+        targetValue = controller.targetY.value,
+        animationSpec = tween(durationMillis = controller.durationMs[3]!!, easing = controller.easing[3]!!),
+        callback = { }
+    )
+
+    Box(
+        modifier = Modifier
+            .size(width, height)
+            .offset(x, y)
+            .then(modifier),
+        contentAlignment = contentAlignment,
+    ) {
+        controller.content()
+    }
+}
 
 /**
  * Controls the animated state and position of a [FlexBox]
@@ -23,7 +81,7 @@ import xdevuikit.core.utils.*
  */
 class FlexBoxController(
     initialSize: DpSize,
-) {
+) : FlexBoxControllerBase {
     /** The mutable state of the [FlexBox]'s width */
     var targetWidth = mutableStateOf(initialSize.width)
         private set
@@ -67,11 +125,11 @@ class FlexBoxController(
      * @param durationMs The times, in milliseconds, that the animations last
      * @param easing The easing functions to animate with (Defaults to [LinearEasing])
      */
-    fun flex(
-        width: Dp? = null,
-        height: Dp? = null,
-        durationMs: Array<Int?> = durations(1000, 1000),
-        easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
+    override fun flex(
+        width: Dp?,
+        height: Dp?,
+        durationMs: Array<Int?>,
+        easing: Array<Easing?>
     ) {
         if (durationMs.size < 2 || easing.size < 2) { return }
 
@@ -88,6 +146,20 @@ class FlexBoxController(
     }
 
     /**
+     * Asynchronous version of [flex] for animation chaining
+     */
+    override suspend fun flexAsync(
+        width: Dp?,
+        height: Dp?,
+        durationMs: Array<Int?>,
+        easing: Array<Easing?>
+    ): FlexBoxControllerBase {
+        flex(width, height, durationMs, easing)
+        delay(max(durationMs.first?: 0, durationMs.second?: 0).toLong())
+        return this
+    }
+
+    /**
      * Helper function for [flex] that applies a single duration and easing to the width & height
      *
      * @param width The target width to animate to
@@ -95,35 +167,93 @@ class FlexBoxController(
      * @param durationMs The time, in milliseconds, that the animations last
      * @param easing The easing function to animate with (Defaults to [LinearEasing])
      */
-    fun flex(
-        width: Dp? = null,
-        height: Dp? = null,
-        durationMs: Int = 1000,
-        easing: Easing = LinearEasing,
+    override fun flex(
+        width: Dp?,
+        height: Dp?,
+        durationMs: Int,
+        easing: Easing
     ) {
         flex(width, height, durations(durationMs, durationMs), easings(easing, easing))
     }
 
     /**
+     * Asynchronous version of [flex] for animation chaining
+     */
+    override suspend fun flexAsync(
+        width: Dp?,
+        height: Dp?,
+        durationMs: Int,
+        easing: Easing
+    ): FlexBoxControllerBase {
+        flex(width, height, durationMs, easing)
+        delay(durationMs.toLong())
+        return this
+    }
+
+    /**
      * Animates to the last state the [FlexBox] was in (Animation and Position)
      */
-    fun revert() {
+    override fun revert() {
         revertFlex()
         revertFloat()
     }
 
     /**
+     * Asynchronous version of [revert] for animation chaining
+     */
+    override suspend fun revertAsync(): FlexBoxControllerBase {
+        flex(lastSize.width, lastSize.height, durationMs, easing)
+
+        float(
+            lastPos.x, lastPos.y,
+            durationMs.takeLast(2).toTypedArray(),
+            easing.takeLast(2).toTypedArray()
+        )
+
+        delay(
+            max(
+                max(durationMs.first?: 0, durationMs.second?: 0),
+                max(durationMs[2]?: 0, durationMs[3]?: 0)
+            ).toLong()
+        )
+
+        return this
+    }
+
+    /**
      * Animates to the last state the [FlexBox] was in
      */
-    fun revertFlex() {
+    override fun revertFlex() {
         flex(lastSize.width, lastSize.height, durationMs, easing)
+    }
+
+    /**
+     * Asynchronous version of [revertFlex] for animation chaining
+     */
+    override suspend fun revertFlexAsync(): FlexBoxControllerBase {
+        revertFlex()
+        delay(max(durationMs.first?: 0, durationMs.second?: 0).toLong())
+        return this
     }
 
     /**
      * Animates to the last position the [FlexBox] was in
      */
-    fun revertFloat() {
-        float(lastPos.x, lastPos.y, durationMs.takeLast(2).toTypedArray(), easing.takeLast(2).toTypedArray())
+    override fun revertFloat() {
+        float(
+            lastPos.x, lastPos.y,
+            durationMs.takeLast(2).toTypedArray(),
+            easing.takeLast(2).toTypedArray()
+        )
+    }
+
+    /**
+     * Asynchronous version of [revertFloat] for animation chaining
+     */
+    override suspend fun revertFloatAsync(): FlexBoxControllerBase {
+        revertFlex()
+        delay(max(durationMs[2]?: 0, durationMs[3]?: 0).toLong())
+        return this
     }
 
     /**
@@ -134,11 +264,11 @@ class FlexBoxController(
      * @param durationMs The times, in milliseconds, that the animations last
      * @param easing The easing functions to animate with (Defaults to [LinearEasing])
      */
-    fun float(
-        x: Dp? = null,
-        y: Dp? = null,
-        durationMs: Array<Int?> = durations(1000, 1000),
-        easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
+    override fun float(
+        x: Dp?,
+        y: Dp?,
+        durationMs: Array<Int?>,
+        easing: Array<Easing?>
     ) {
         if (durationMs.size < 2 || easing.size < 2) { return }
 
@@ -155,6 +285,20 @@ class FlexBoxController(
     }
 
     /**
+     * Asynchronous version of [float] for animation chaining
+     */
+    override suspend fun floatAsync(
+        x: Dp?,
+        y: Dp?,
+        durationMs: Array<Int?>,
+        easing: Array<Easing?>
+    ): FlexBoxControllerBase {
+        float(x, y, durationMs, easing)
+        delay(max(durationMs.first?: 0, durationMs.second?: 0).toLong())
+        return this
+    }
+
+    /**
      * Helper function for [float] that applies a single duration and easing to the x & y
      *
      * @param x The target X to animate to
@@ -162,13 +306,27 @@ class FlexBoxController(
      * @param durationMs The time, in milliseconds, that the animation lasts
      * @param easing The easing function to animate with (Defaults to [LinearEasing])
      */
-    fun float(
-        x: Dp? = null,
-        y: Dp? = null,
-        durationMs: Int = 1000,
-        easing: Easing = LinearEasing,
+    override fun float(
+        x: Dp?,
+        y: Dp?,
+        durationMs: Int,
+        easing: Easing
     ) {
         float(x, y, durations(durationMs, durationMs), easings(easing, easing))
+    }
+
+    /**
+     * Asynchronous version of [float] for animation chaining
+     */
+    override suspend fun floatAsync(
+        x: Dp?,
+        y: Dp?,
+        durationMs: Int,
+        easing: Easing
+    ): FlexBoxControllerBase {
+        float(x, y, durationMs, easing)
+        delay(durationMs.toLong())
+        return this
     }
 
     /**
@@ -177,66 +335,101 @@ class FlexBoxController(
      * @param x The X position to move to
      * @param y The Y position to move to
      */
-    fun snap(
-        x: Dp? = null,
-        y: Dp? = null,
+    override fun snap(
+        x: Dp?,
+        y: Dp?
     ) {
         float(x, y, durations(0, 0), easings(Ease, Ease))
     }
+
+    /**
+     * Asynchronous version of [snap] for animation chaining
+     */
+    override suspend fun snapAsync(
+        x: Dp?,
+        y: Dp?
+    ): FlexBoxControllerBase {
+        snap(x, y)
+        return this
+    }
 }
 
-/**
- * A flexible box with built-in size and position controls
- *
- * @param modifier Any modifiers to the underlying box
- * @param initialSize The initial size of the box
- * @param contentAlignment How to align the internal content
- * @param controller The [FlexBoxController] associated with this box
- * @param content The internal content to display
- */
-@Composable
-fun FlexBox(
-    modifier: Modifier = Modifier,
-    initialSize: DpSize = DpSize(100.dp, 100.dp),
-    contentAlignment: Alignment = Alignment.Center,
-    controller: FlexBoxController = remember { FlexBoxController(initialSize) },
-    content: @Composable FlexBoxController.() -> Unit
-) {
-    /** The mutable state of the box's width */
-    val width by animateStateWithCallback(
-        targetValue = controller.targetWidth.value,
-        animationSpec = tween(durationMillis = controller.durationMs.first!!, easing = controller.easing.first!!),
-        callback = { }
+interface FlexBoxControllerBase {
+    fun flex(
+        width: Dp? = null,
+        height: Dp? = null,
+        durationMs: Array<Int?> = durations(1000, 1000),
+        easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
     )
 
-    /** The mutable state of the box's height */
-    val height by animateStateWithCallback(
-        targetValue = controller.targetHeight.value,
-        animationSpec = tween(durationMillis = controller.durationMs.second!!, easing = controller.easing.second!!),
-        callback = { }
+    suspend fun flexAsync(
+        width: Dp? = null,
+        height: Dp? = null,
+        durationMs: Array<Int?> = durations(1000, 1000),
+        easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
+    ): FlexBoxControllerBase
+
+    fun flex(
+        width: Dp? = null,
+        height: Dp? = null,
+        durationMs: Int = 1000,
+        easing: Easing = LinearEasing
     )
 
-    /** The mutable state of the box's x position */
-    val x by animateStateWithCallback(
-        targetValue = controller.targetX.value,
-        animationSpec = tween(durationMillis = controller.durationMs[2]!!, easing = controller.easing[2]!!),
-        callback = { }
+    suspend fun flexAsync(
+        width: Dp? = null,
+        height: Dp? = null,
+        durationMs: Int = 1000,
+        easing: Easing = LinearEasing
+    ): FlexBoxControllerBase
+
+    fun revert()
+
+    suspend fun revertAsync(): FlexBoxControllerBase
+
+    fun revertFlex()
+
+    suspend fun revertFlexAsync(): FlexBoxControllerBase
+
+    fun revertFloat()
+
+    suspend fun revertFloatAsync(): FlexBoxControllerBase
+
+    fun float(
+        x: Dp? = null,
+        y: Dp? = null,
+        durationMs: Array<Int?> = durations(1000, 1000),
+        easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
     )
 
-    /** The mutable state of the box's y position */
-    val y by animateStateWithCallback(
-        targetValue = controller.targetY.value,
-        animationSpec = tween(durationMillis = controller.durationMs[3]!!, easing = controller.easing[3]!!),
-        callback = { }
+    suspend fun floatAsync(
+        x: Dp? = null,
+        y: Dp? = null,
+        durationMs: Array<Int?> = durations(1000, 1000),
+        easing: Array<Easing?> = easings(LinearEasing, LinearEasing)
+    ): FlexBoxControllerBase
+
+    fun float(
+        x: Dp? = null,
+        y: Dp? = null,
+        durationMs: Int = 1000,
+        easing: Easing = LinearEasing
     )
 
-    Box(
-        modifier = Modifier
-            .size(width, height)
-            .offset(x, y)
-            .then(modifier),
-        contentAlignment = contentAlignment,
-    ) {
-        controller.content()
-    }
+    suspend fun floatAsync(
+        x: Dp? = null,
+        y: Dp? = null,
+        durationMs: Int = 1000,
+        easing: Easing = LinearEasing
+    ): FlexBoxControllerBase
+
+    fun snap(
+        x: Dp? = null,
+        y: Dp? = null
+    )
+
+    suspend fun snapAsync(
+        x: Dp? = null,
+        y: Dp? = null
+    ): FlexBoxControllerBase
 }
