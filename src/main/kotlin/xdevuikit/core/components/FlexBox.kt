@@ -39,28 +39,28 @@ fun FlexBox(
     val width by animateStateWithCallback(
         targetValue = controller.targetWidth.value,
         animationSpec = tween(durationMillis = controller.durationMs.first!!, easing = controller.easing.first!!),
-        callback = { }
+        callback = { controller.animating = false }
     )
 
     /** The mutable state of the box's height */
     val height by animateStateWithCallback(
         targetValue = controller.targetHeight.value,
         animationSpec = tween(durationMillis = controller.durationMs.second!!, easing = controller.easing.second!!),
-        callback = { }
+        callback = { controller.animating = false }
     )
 
     /** The mutable state of the box's x position */
     val x by animateStateWithCallback(
         targetValue = controller.targetX.value,
         animationSpec = tween(durationMillis = controller.durationMs[2]!!, easing = controller.easing[2]!!),
-        callback = { }
+        callback = { controller.animating = false }
     )
 
     /** The mutable state of the box's y position */
     val y by animateStateWithCallback(
         targetValue = controller.targetY.value,
         animationSpec = tween(durationMillis = controller.durationMs[3]!!, easing = controller.easing[3]!!),
-        callback = { }
+        callback = { controller.animating = false }
     )
 
     Box(
@@ -117,6 +117,9 @@ class FlexBoxController(
     /** The mutable state of the [FlexBox]'s Y position */
     var targetY = mutableStateOf(0.dp)
 
+    /** Whether the [FlexBox] is currently animating */
+    var animating = false
+
     /**
      * Animates a [FlexBox] to a specified size
      *
@@ -154,8 +157,9 @@ class FlexBoxController(
         durationMs: Array<Int?>,
         easing: Array<Easing?>
     ): FlexBoxAsyncBase {
+        animating = true
         flex(width, height, durationMs, easing)
-        delay(max(durationMs.first?: 0, durationMs.second?: 0).toLong())
+        while (animating) { delay(100) }
         return this
     }
 
@@ -185,8 +189,9 @@ class FlexBoxController(
         durationMs: Int,
         easing: Easing
     ): FlexBoxAsyncBase {
+        animating = true
         flex(width, height, durationMs, easing)
-        delay(durationMs.toLong())
+        while (animating) { delay(100) }
         return this
     }
 
@@ -202,21 +207,16 @@ class FlexBoxController(
      * Asynchronous version of [revert] for animation chaining
      */
     override suspend fun revertAsync(): FlexBoxAsyncBase {
-        flex(lastSize.width, lastSize.height, durationMs, easing)
+        animating = true
 
+        flex(lastSize.width, lastSize.height, durationMs, easing)
         float(
             lastPos.x, lastPos.y,
             durationMs.takeLast(2).toTypedArray(),
             easing.takeLast(2).toTypedArray()
         )
 
-        delay(
-            max(
-                max(durationMs.first?: 0, durationMs.second?: 0),
-                max(durationMs[2]?: 0, durationMs[3]?: 0)
-            ).toLong()
-        )
-
+        while (animating) { delay(100) }
         return this
     }
 
@@ -231,8 +231,9 @@ class FlexBoxController(
      * Asynchronous version of [revertFlex] for animation chaining
      */
     override suspend fun revertFlexAsync(): FlexBoxAsyncBase {
+        animating = true
         revertFlex()
-        delay(max(durationMs.first?: 0, durationMs.second?: 0).toLong())
+        while (animating) { delay(100) }
         return this
     }
 
@@ -251,8 +252,9 @@ class FlexBoxController(
      * Asynchronous version of [revertFloat] for animation chaining
      */
     override suspend fun revertFloatAsync(): FlexBoxAsyncBase {
+        animating = true
         revertFlex()
-        delay(max(durationMs[2]?: 0, durationMs[3]?: 0).toLong())
+        while (animating) { delay(100) }
         return this
     }
 
@@ -293,8 +295,9 @@ class FlexBoxController(
         durationMs: Array<Int?>,
         easing: Array<Easing?>
     ): FlexBoxAsyncBase {
+        animating = true
         float(x, y, durationMs, easing)
-        delay(max(durationMs.first?: 0, durationMs.second?: 0).toLong())
+        while (animating) { delay(100) }
         return this
     }
 
@@ -324,8 +327,9 @@ class FlexBoxController(
         durationMs: Int,
         easing: Easing
     ): FlexBoxAsyncBase {
+        animating = true
         float(x, y, durationMs, easing)
-        delay(durationMs.toLong())
+        while (animating) { delay(100) }
         return this
     }
 
